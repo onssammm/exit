@@ -3,169 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>학교 복도: 가이드 시스템 적용</title>
+    <title>학교 복도: 빛의 인도 최종본</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: 'serif'; }
         .game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-
-        .background-img { 
-            width: 100%; height: 100%; object-fit: cover; 
-            filter: brightness(0.4) contrast(1.1) hue-rotate(180deg); 
-            transition: all 1s ease; cursor: crosshair;
-        }
-
+        .background-img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.3) contrast(1.2) hue-rotate(180deg); transition: all 1s ease; cursor: crosshair; }
         .hotspot { position: absolute; cursor: pointer; z-index: 10; }
         
-        .overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 15, 0.9); display: flex; justify-content: center;
-            align-items: center; z-index: 100;
-        }
+        /* 위치 조정 시 아래 border 주석을 해제하면 영역이 보입니다 */
+        /* .hotspot { border: 2px solid rgba(255, 0, 0, 0.5); } */
+
+        #inventory { position: absolute; top: 20px; right: 20px; width: 100px; height: 100px; border: 2px dashed #303060; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #6060ff; font-size: 0.7rem; background: rgba(0,0,0,0.6); border-radius: 10px; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 15, 0.95); display: flex; justify-content: center; align-items: center; z-index: 100; }
         .hidden { display: none !important; }
-        
-        .box {
-            background: #050515; color: #b0b0e0; padding: 40px; border: 1px solid #303060;
-            box-shadow: 0 0 30px rgba(0, 0, 255, 0.5); text-align: center; max-width: 450px;
-            border-radius: 10px;
-        }
-
-        input { 
-            background: #101025; border: 1px solid #6060ff; color: #fff; 
-            padding: 12px; width: 80%; font-size: 1.5rem; text-align: center; 
-            margin-bottom: 20px; letter-spacing: 5px;
-        }
-
-        button { background: transparent; color: #6060ff; border: 1px solid #6060ff; padding: 10px 25px; cursor: pointer; transition: 0.3s; }
+        .box { background: #050515; color: #b0b0e0; padding: 40px; border: 1px solid #303060; box-shadow: 0 0 30px rgba(0, 0, 255, 0.5); text-align: center; max-width: 450px; border-radius: 10px; }
+        button { background: transparent; color: #6060ff; border: 1px solid #6060ff; padding: 10px 25px; cursor: pointer; margin-top: 20px; }
         button:hover { background: #6060ff; color: #fff; }
-
-        #escape-btn {
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            z-index: 50; padding: 15px 40px; background: rgba(0, 0, 30, 0.8);
-            color: #fff; border: 2px solid #6060ff; font-size: 1.2rem; cursor: pointer;
-        }
+        input { background: #101025; border: 1px solid #6060ff; color: #fff; padding: 12px; width: 80%; font-size: 1.5rem; text-align: center; margin-bottom: 20px; letter-spacing: 5px; }
+        #escape-btn { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 50; padding: 15px 40px; background: rgba(0, 0, 30, 0.8); color: #fff; border: 2px solid #6060ff; cursor: pointer; }
     </style>
 </head>
-<body>
+<body onclick="handleBackgroundClick(event)">
 
-    <div class="game-container" onclick="handleBackgroundClick(event)">
+    <div class="game-container">
         <img src="background.png" id="main-bg" class="background-img">
+        <div id="inventory"><span>Inventory</span><div id="flashlight-item" style="display:none; color: yellow; font-size: 1.2rem; margin-top: 5px;">🔦</div></div>
 
         <div id="hotspot-trash" class="hotspot" style="top: 50%; left: 51%; width: 14%; height: 35%;" onclick="handleTrash(event)"></div>
-        
         <div id="hotspot-frame" class="hotspot" style="top: 15%; left: 75%; width: 15%; height: 25%;" onclick="handleFrame(event)"></div>
+        <div id="hotspot-light" class="hotspot" style="top: 15%; left: 35%; width: 30%; height: 20%;" onclick="handleLight(event)"></div>
+        <div id="hotspot-hidden" class="hotspot" style="top: 70%; left: 5%; width: 15%; height: 20%;" onclick="handleHidden(event)"></div>
 
-        <button id="escape-btn">잠긴 문 열기</button>
+        <button id="escape-btn" onclick="openAnswerModal(event)">잠긴 문 열기</button>
     </div>
 
-    <div id="start-modal" class="overlay">
-        <div class="box">
-            <h1 style="color: #6060ff;">학교 복도</h1>
-            <p>"단서를 찾아야 한다. 어디부터 살펴볼까?"</p>
-            <button onclick="startGame()">탐색 시작</button>
-        </div>
-    </div>
-
-    <div id="info-modal" class="overlay hidden">
-        <div class="box">
-            <p id="info-text" style="font-size: 1.2rem; line-height: 1.6; white-space: pre-wrap;"></p>
-            <button onclick="closeModal()">확인</button>
-        </div>
-    </div>
-
-    <div id="answer-modal" class="overlay hidden">
-        <div class="box">
-            <h3>비밀번호 입력</h3>
-            <input type="text" id="answer-input" maxlength="4" placeholder="0000">
-            <br>
-            <button onclick="checkAnswer()">확인</button>
-            <button onclick="closeModal()">취소</button>
-        </div>
-    </div>
+    <div id="start-modal" class="overlay"><div class="box"><h1>침묵의 복도</h1><p>"어둠 속에 갇혔다. 탈출할 방법을 찾아보자."</p><button onclick="startGame()">탐색 시작</button></div></div>
+    <div id="info-modal" class="overlay hidden"><div class="box"><p id="info-text" style="font-size: 1.2rem; line-height: 1.6; white-space: pre-wrap;"></p><button onclick="closeModal()">확인</button></div></div>
+    <div id="answer-modal" class="overlay hidden"><div class="box"><h3>비밀번호 입력</h3><input type="text" id="answer-input" maxlength="4" placeholder="0000"><br><button onclick="checkAnswer()">확인</button><button onclick="closeModal()">취소</button></div></div>
 
     <audio id="audio-bgm" src="bgm.mp3" loop></audio>
     <audio id="audio-trash" src="trash.mp3"></audio>
     <audio id="audio-frame" src="frame.mp3"></audio>
     <audio id="audio-miss" src="miss.mp3"></audio>
+    <audio id="audio-item" src="item.mp3"></audio>
 
     <script>
         const infoModal = document.getElementById('info-modal');
         const answerModal = document.getElementById('answer-modal');
         const bgm = document.getElementById('audio-bgm');
-        const missSfx = document.getElementById('audio-miss');
         
         let isTrashChecked = false;
+        let isFrameAttempted = false;
+        let hasFlashlight = false;
         let missClickCount = 0;
-        const MISS_LIMIT = 5;
 
-        function startGame() {
-            document.getElementById('start-modal').classList.add('hidden');
-            bgm.volume = 0.3;
-            bgm.play();
-        }
+        function startGame() { document.getElementById('start-modal').classList.add('hidden'); bgm.volume = 0.3; bgm.play(); }
 
-        // 배경 클릭(미스 클릭) 처리
         function handleBackgroundClick(e) {
-            // 핫스팟이나 버튼이 아닌 곳을 클릭했을 때
             if (!e.target.classList.contains('hotspot') && e.target.id !== 'escape-btn') {
-                missSfx.currentTime = 0;
-                missSfx.play();
-
-                // 휴지통을 아직 안 눌렀을 때만 미스 카운트 증가
-                if (!isTrashChecked) {
-                    missClickCount++;
-                    if (missClickCount >= MISS_LIMIT) {
-                        showInfo("허공을 뒤져봐야 소용없다. 저기 가득 찬 휴지통이 수상해 보이는데...");
-                        missClickCount = 0; // 힌트 출력 후 초기화
-                    }
+                document.getElementById('audio-miss').currentTime = 0;
+                document.getElementById('audio-miss').play();
+                
+                missClickCount++;
+                
+                if (!isTrashChecked && missClickCount >= 5) {
+                    showInfo("허공을 뒤져봐야 소용없다. 저기 가득 찬 휴지통은 어떨까?");
+                    missClickCount = 0;
+                }
+                else if (isFrameAttempted && !hasFlashlight && missClickCount >= 5) {
+                    showInfo("어둠 속을 비출 도구가 필요해. 왼쪽 사물함 쪽 바닥을 더 자세히 살펴보자.");
+                    missClickCount = 0;
                 }
             }
         }
 
-        // 휴지통 클릭
+        function handleLight(e) {
+            e.stopPropagation();
+            showInfo("복도 불은 켜지지 않는다. 건전지가 다 된 걸까? 다른 도구가 필요하다.");
+        }
+
         function handleTrash(e) {
             e.stopPropagation();
             document.getElementById('audio-trash').play();
-            
             isTrashChecked = true;
-            showInfo("휴지통 속 찢어진 쪽지 발견:\n'우리가 시작된 날이 열쇠다.'\n\n다른 곳도 더 살펴보자.");
+            missClickCount = 0;
+            showInfo("휴지통 속 쪽지:\n'진실은 액자 속에 기록되어 있다. 하지만 어둠이 그것을 가리고 있을 것이다.'");
         }
 
-        // 액자 클릭
         function handleFrame(e) {
             e.stopPropagation();
             if (!isTrashChecked) {
-                showInfo("평범한 인물 사진들이다. 아직은 별다른 단서가 보이지 않는다.");
+                showInfo("평범한 액자다. 지금은 다른 곳을 먼저 조사해야 할 것 같다.");
+            } else if (!hasFlashlight) {
+                isFrameAttempted = true;
+                missClickCount = 0;
+                showInfo("액자 아래에 무언가 적혀 있지만, 너무 어두워서 읽을 수가 없다. 빛이 필요하다.");
             } else {
                 document.getElementById('audio-frame').play();
-                showInfo("액자 하단을 자세히 보니 날짜가 적혀 있다.\n'개교 기념일: 08월 15일'");
+                showInfo("손전등으로 액자를 비추자 숨겨진 글자가 선명하게 보인다.\n\n'개교 기념일: 08월 15일'");
             }
         }
 
-        function showInfo(text) {
-            document.getElementById('info-text').innerText = text;
-            infoModal.classList.remove('hidden');
+        function handleHidden(e) {
+            e.stopPropagation();
+            if (!isFrameAttempted) {
+                showInfo("너무 어두워서 아무것도 보이지 않는다.");
+                return;
+            }
+            if (!hasFlashlight) {
+                hasFlashlight = true;
+                document.getElementById('audio-item').play();
+                document.getElementById('flashlight-item').style.display = 'block';
+                showInfo("사물함 구석에서 '손전등'을 발견했다!\n이제 액자에 적힌 글자를 확인할 수 있을 것 같다.");
+                document.getElementById('main-bg').style.filter = "brightness(0.5) contrast(1.1) hue-rotate(180deg)";
+            }
         }
 
-        document.getElementById('escape-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            answerModal.classList.remove('hidden');
-        });
+        function openAnswerModal(e) { e.stopPropagation(); answerModal.classList.remove('hidden'); }
+        function showInfo(text) { document.getElementById('info-text').innerText = text; infoModal.classList.remove('hidden'); }
+        function closeModal() { infoModal.classList.add('hidden'); answerModal.classList.add('hidden'); }
 
         function checkAnswer() {
-            const val = document.getElementById('answer-input').value;
-            if (val === "0815") {
+            if (document.getElementById('answer-input').value === "0815") {
                 document.getElementById('main-bg').style.filter = "brightness(1.1) contrast(1) hue-rotate(0deg)";
-                alert("탈출 성공! 복도의 끝에서 빛이 보입니다.");
+                alert("탈출 성공!");
                 location.reload(); 
-            } else {
-                alert("비밀번호가 틀립니다.");
-            }
-        }
-
-        function closeModal() {
-            infoModal.classList.add('hidden');
-            answerModal.classList.add('hidden');
+            } else { alert("비밀번호가 틀립니다."); }
         }
     </script>
 </body>
-</htm
+</html>
